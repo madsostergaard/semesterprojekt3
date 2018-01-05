@@ -10,6 +10,9 @@ public class HelloWorld {
 		bf.readLine();
 		System.out.println("lol");
 		System.out.println("NEJ");
+		for(int i = 0; i < 100; i++) {
+			System.out.println("*HEJ HEJ*");
+		}
 	}
 
 }
