@@ -9,6 +9,7 @@ public class HelloWorld {
 		BufferedReader bf = new BufferedReader(new InputStreamReader(System.in));
 		bf.readLine();
 		System.out.println("lol");
+		System.out.println("NEJ");
 	}
 
 }
