@@ -1,3 +1,4 @@
+package serverside;
 public class XMLWriter {
 
 	private String out = "";

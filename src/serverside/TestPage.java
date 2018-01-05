@@ -1,3 +1,4 @@
+package serverside;
 /**
  * CGI klasse til at teste protokollen.
  * 
