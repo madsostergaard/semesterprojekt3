@@ -1,5 +1,6 @@
 package serverside;
 import java.sql.*;
+import java.text.ParseException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
@@ -73,6 +74,7 @@ public class DatabaseConnection {
 		stmt.setString(1, uuid);
 
 		ResultSet rs = stmt.executeQuery();
+		
 		while (rs.next()) {
 			temp = ""; // skal være ID&overskrift&tidspunkt
 			temp += "" + rs.getInt(1);
@@ -85,8 +87,36 @@ public class DatabaseConnection {
 
 		return output;
 	}
+	
+	// ----------------------------------
+	 /*
+	public ArrayList<Notice> getNotices(String uuid) throws SQLException {
+		ArrayList<Notice> output = new ArrayList<>();
+		String temp; // string to add to output
 
-	public String getNoticeDetails(int id) throws SQLException {
+		String sql = "SELECT idIndkaldelse, overskrift, tidspunkt FROM hospital.Indkaldelse WHERE Patient_CPR_UUID = ?;";
+		PreparedStatement stmt = conn.prepareStatement(sql);
+		stmt.setString(1, uuid);
+
+		ResultSet rs = stmt.executeQuery();
+		
+		while (rs.next()) {
+			temp = ""; // skal være ID&overskrift&tidspunkt
+			temp += "" + rs.getInt(1);
+			temp += "&" + rs.getString(2);
+			LocalDate date = rs.getDate(3).toLocalDate();
+			temp += "&" + date.toString();
+			//log.debug("Found notice, adding to output {}", temp);
+			output.add(temp);
+		}
+
+		return output;
+	}
+	*/
+	
+	// ----------------------------------
+	
+	public String getNoticeDetails(int id) throws SQLException, ParseException {
 		String output = "";
 		String sql = "SELECT overskrift, detaljer, tidspunkt FROM hospital.Indkaldelse WHERE idIndkaldelse = ?;";
 		PreparedStatement stmt = conn.prepareStatement(sql);
@@ -98,9 +128,17 @@ public class DatabaseConnection {
 			output += "&" + rs.getString(2);
 			output += "&" + rs.getDate(3).toLocalDate().toString();
 		}
-
+		
+		// den nye getNoticeDetails?
+		if (rs.next()) {
+				Notice ntc = new Notice(rs.getString(1), rs.getString(2), rs.getDate(3).toLocalDate().toString());
+			
+		}
+		// return ntc;
+		
 		return output;
 	}
+	
 
 	/*
 	 * public static void main(String[] args) throws SQLException,

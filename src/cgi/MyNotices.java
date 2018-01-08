@@ -1,10 +1,11 @@
 package cgi;
 import java.sql.SQLException;
+import java.text.ParseException;
 import java.util.StringTokenizer;
 //import org.slf4j.Logger;
 //import org.slf4j.LoggerFactory;
 
-public class Notices extends CGI {
+public class MyNotices extends CGI {
 
 	private static String id = "";
 	private static String title = "";
@@ -68,7 +69,15 @@ public class Notices extends CGI {
 		try {
 			String temp = "";
 			if (!id.isEmpty()) {
-				temp = dtb.getNoticeDetails(Integer.valueOf(id));
+				try {
+					temp = dtb.getNoticeDetails(Integer.valueOf(id));
+				} catch (NumberFormatException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (ParseException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				handleNoticeDetails(temp);
 			}
 
