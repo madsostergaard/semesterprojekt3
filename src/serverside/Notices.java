@@ -4,26 +4,26 @@ import java.util.ArrayList;
 
 public class Notices {
 
-	private int uuid;
+	private String uuid;
 	private ArrayList<Notice> notice;
 
-	Notices(int uuid) {
+	Notices(String uuid) {
 
 		this.uuid = uuid;
 	}
 
-	Notices(int uuid, ArrayList<Notice> notice) {
+	Notices(String uuid, ArrayList<Notice> notice) {
 
 		this.uuid = uuid;
 		this.notice = notice;
 
 	}
 
-	public int getUuid() {
+	public String getUuid() {
 		return uuid;
 	}
 
-	public void setUuid(int uuid) {
+	public void setUuid(String uuid) {
 		this.uuid = uuid;
 	}
 

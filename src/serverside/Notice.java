@@ -9,7 +9,7 @@ import java.text.SimpleDateFormat;
 public class Notice {
 
 	private Date date; // Gemmes det som et Date objekt i databasen eller er det bare en string?
-	private DateFormat format = new SimpleDateFormat("mmddyy"); // Skal vi have tiden med, eller ny attribut?
+	private DateFormat format = new SimpleDateFormat("mmddyy hh:mm"); // Skal vi have tiden med, eller ny attribut?
 	private String time;
 	private String title;
 	private String URL;
