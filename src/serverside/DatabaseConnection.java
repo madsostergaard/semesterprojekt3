@@ -5,6 +5,7 @@ import java.text.ParseException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.StringTokenizer;
 
 //import org.slf4j.LoggerFactory;
 //import org.slf4j.Logger;
@@ -131,7 +132,7 @@ public class DatabaseConnection {
 
 		// den nye getNoticeDetails?
 		if (rs.next()) {
-			Notice ntc = new Notice(rs.getString(1), rs.getString(2), rs.getDate(3).toLocalDate().toString());
+			Notice ntc = new Notice(rs.getString(1), rs.getString(2), rs.getDate(3).toLocalDate().toString(),0);
 
 		}
 		// return ntc;
@@ -152,11 +153,12 @@ public class DatabaseConnection {
 		ArrayList<String> list = conn.getNotices(uuid);
 		for(String s : list){
 			System.out.println(s);
+			StringTokenizer st = new StringTokenizer("&");
 		}
 		
 		try {
 			
-			Notice ntc = new Notice("En titel", "su3.eduhost.dk", "150892");
+			Notice ntc = new Notice("En titel", "su3.eduhost.dk", "1992- 14:00",0);
 			ntc.setTime("");
 			
 			
