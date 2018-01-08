@@ -16,7 +16,7 @@ public class XMLWriter {
 	}
 
 	public void writeStart(String tag) {
-		writeStart(tag, false);
+		writeStart(tag, false); 
 	}
 
 	private void writeStart(String tag, boolean contained) {
