@@ -72,8 +72,10 @@ public class DatabaseConnection {
 	 * Builds a Notices-object from the notices in the database
 	 * @param sessionid the id of the session
 	 * @return a Notices-object containing all the present notices 
+	 * @throws SQLException 
+	 * @throws ParseException 
 	 */
-	public Notices getSessionNotices(String sessionid){
+	public Notices getSessionNotices(String sessionid) throws SQLException, ParseException{
 		String uuid = "";
 		String sql = "SELECT uuid FROM session WHERE idSession = ?";
 		PreparedStatement stmt = conn.prepareStatement(sql);
