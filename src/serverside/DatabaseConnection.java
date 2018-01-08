@@ -67,6 +67,56 @@ public class DatabaseConnection {
 
 		return bol;
 	}
+	
+	/**
+	 * Builds a Notices-object from the notices in the database
+	 * @param sessionid the id of the session
+	 * @return a Notices-object containing all the present notices 
+	 */
+	public Notices getSessionNotices(String sessionid){
+		String uuid = "";
+		String sql = "SELECT uuid FROM session WHERE idSession = ?";
+		PreparedStatement stmt = conn.prepareStatement(sql);
+		stmt.setString(1, sessionid);
+		ResultSet rs = stmt.executeQuery();
+		
+		if(rs.next()){
+			uuid = rs.getString(1);
+		}
+		
+		Notices notices = new Notices(uuid);
+		
+		sql = "SELECT datotid, titel, url, sted FROM sessionNotice WHERE session_idsession = ?";
+		stmt = conn.prepareStatement(sql);
+		stmt.setString(1, sessionid);
+		rs = stmt.executeQuery();
+		
+		while(rs.next()){
+			String time = rs.getTime(1).toLocalTime().toString();
+			String date = rs.getDate(1).toLocalDate().toString();
+			String title = rs.getString(2);
+			String url = rs.getString(3);
+			int sted = rs.getInt(4);
+			Notice n = new Notice(title, url, date+" "+time, sted);
+			notices.addNotice(n);
+		}
+		
+		return notices;
+	}
+	
+	
+	public void saveSessionNotices(String sessionid, Notices n){		
+		ArrayList<Notice> list = n.getNotice();
+		for(Notice nt : list){
+			saveNotice(sessionid, nt);
+		}
+	}
+	
+	
+	public void saveNotice(String sessionid, Notice n){
+		String sql = "";
+		
+	}
 
 	public ArrayList<String> getNotices(String uuid) throws SQLException {
 		ArrayList<String> output = new ArrayList<>();
@@ -92,30 +142,6 @@ public class DatabaseConnection {
 
 		return output;
 	}
-
-	// ----------------------------------
-	/*
-	 * public ArrayList<Notice> getNotices(String uuid) throws SQLException {
-	 * ArrayList<Notice> output = new ArrayList<>(); String temp; // string to
-	 * add to output
-	 * 
-	 * String sql =
-	 * "SELECT idIndkaldelse, overskrift, tidspunkt FROM hospital.Indkaldelse WHERE Patient_CPR_UUID = ?;"
-	 * ; PreparedStatement stmt = conn.prepareStatement(sql); stmt.setString(1,
-	 * uuid);
-	 * 
-	 * ResultSet rs = stmt.executeQuery();
-	 * 
-	 * while (rs.next()) { temp = ""; // skal være ID&overskrift&tidspunkt temp
-	 * += "" + rs.getInt(1); temp += "&" + rs.getString(2); LocalDate date =
-	 * rs.getDate(3).toLocalDate(); temp += "&" + date.toString();
-	 * //log.debug("Found notice, adding to output {}", temp); output.add(temp);
-	 * }
-	 * 
-	 * return output; }
-	 */
-
-	// ----------------------------------
 
 	public String getNoticeDetails(int id) throws SQLException, ParseException {
 		String output = "";
@@ -153,13 +179,15 @@ public class DatabaseConnection {
 		ArrayList<String> list = conn.getNotices(uuid);
 		for(String s : list){
 			System.out.println(s);
-			StringTokenizer st = new StringTokenizer("&");
+			//StringTokenizer st = new StringTokenizer("&");
+			String datetime = s.substring(s.length()-19);
+			System.out.println(datetime);
 		}
 		
 		try {
 			
-			Notice ntc = new Notice("En titel", "su3.eduhost.dk", "1992- 14:00",0);
-			ntc.setTime("");
+			Notice ntc = new Notice("En titel", "su3.eduhost.dk", "030208",0);
+			System.out.println(ntc.getDate());
 			
 			
 			
@@ -169,8 +197,6 @@ public class DatabaseConnection {
 		}
 	}
 	
-	
-
 	/**
 	 * for testing connection
 	 * 
