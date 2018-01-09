@@ -60,6 +60,31 @@ public class ClientServer {
 		return isValid;
 	}
 
+	private static void sendPacket(String ip, String uuid) {
+		writer.reset();
+		writer.writeStart(REQUEST);
+		writer.writeTag("cmd", "01", true);
+		writer.writeTag("prm", uuid, true);
+		writer.writeEnd(REQUEST);
+
+		try {
+			InetAddress sendAddress = InetAddress.getByName(ip);
+			int port = 9876; // maybe something more specific
+
+			sendData = new byte[1024];
+			sendData = writer.getXML().getBytes();
+			sendPacket = new DatagramPacket(sendData, sendData.length, sendAddress, port);
+
+			socket.send(sendPacket);
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
 	public static void main(String[] args) throws Exception {
 		// initialization
 		conf = new Config("konfiguration.conf");
@@ -211,7 +236,11 @@ public class ClientServer {
 					break;
 
 				case "begin":
-					// send OK:
+					new Thread(){
+						public void run(){
+							
+						}
+					}.run();
 					IPAddress = receivePacket.getAddress();
 					port = receivePacket.getPort();
 
@@ -235,79 +264,37 @@ public class ClientServer {
 					st = new StringTokenizer(data, "\t");
 					uuid = st.nextToken();
 
+					notices = new Notices(uuid);
+
 					// make threads for each hospital
 					for (String s : ip) {
-						new Thread() {
-							public void sendPacket() {
-								writer.reset();
-								writer.writeStart(REQUEST);
-								writer.writeTag("cmd", "01", true);
-								writer.writeTag("prm", uuid, true);
-								writer.writeEnd(REQUEST);
-
-								try {
-									InetAddress sendAddress = InetAddress.getByName(s);
-									int port = 9876; // maybe something more specific
-
-									sendData = new byte[1024];
-									sendData = writer.getXML().getBytes();
-									sendPacket = new DatagramPacket(sendData, sendData.length, sendAddress, port);
-
-									socket.send(sendPacket);
-								} catch (UnknownHostException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								} catch (IOException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-
-							}
-
+						Timer timer = new Timer();
+						timer.scheduleAtFixedRate(new TimerTask() {
 							public void run() {
-								sendPacket();
-								Timer timer = new Timer();
-								timer.schedule(new TimerTask() {
-									public void run() {
-										sendPacket();
-									}
-								}, 5000);
-								try {
-									receiveData = new byte[1024];
-									receivePacket = new DatagramPacket(receiveData, receiveData.length);
-									socket.receive(receivePacket);
-									timer.cancel();
-								} catch (IOException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
+								sendPacket(s, uuid);
+							}
+						}, 0, 1000);
+						try {
+							receiveData = new byte[1024];
+							receivePacket = new DatagramPacket(receiveData, receiveData.length);
+							socket.receive(receivePacket);
+							if (validatePacket(receivePacket)) {
+								timer.cancel();
+
+								// handle reply
+								Notice n = new Notice("", "", "", 0);
+								String in = new String(receivePacket.getData(), 0, receivePacket.getLength());
+								is = new ByteArrayInputStream(in.getBytes());
+								parser.parse(is);
+
 							}
 
-						}.start();
-					}
+							// if status = 20: receive again
 
-					writer.reset();
-					writer.writeStart(REQUEST);
-					writer.writeTag("uuid", uuid, true);
-					writer.writeTag(NOTICE, "", true);
-					writer.writeEnd(REQUEST);
-
-					sendData = new byte[1024];
-					sendData = writer.getXML().getBytes();
-
-					for (String s : ip) {
-						InetAddress temp = InetAddress.getByName(s);
-						if (temp.toString().equals("/127.0.0.1")) {
-							// TODO:
-							// skal
-							// være !
-							sendPacket = new DatagramPacket(sendData, sendData.length, temp, port);
-							socket.send(sendPacket);
+						} catch (IOException e) {
+							e.printStackTrace();
 						}
 					}
-
-					// TODO: check local database and put results into temp
-					// database
 
 					break;
 

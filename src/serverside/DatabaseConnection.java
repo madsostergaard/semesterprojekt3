@@ -177,14 +177,15 @@ public class DatabaseConnection {
 
 		return notices;
 	}
-	
-	public String getSessionFromUUID(String uuid){
+
+	public String getSessionFromUUID(String uuid) {
 		String sessionid = "";
 		String sql = "SELECT idSession FROM hospital.session WHERE uuid = ?";
-		String [] par = {uuid};
+		String[] par = { uuid };
 		try {
-			ResultSet rs = query(sql,par);
-			if(rs.next()) sessionid = ""+rs.getInt(1);
+			ResultSet rs = query(sql, par);
+			if (rs.next())
+				sessionid = "" + rs.getInt(1);
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -252,15 +253,9 @@ public class DatabaseConnection {
 		// System.out.println(datetime);
 		// }
 
-		try {
+		Notice ntc = new Notice("En titel", "su3.eduhost.dk", "030208", 0);
+		System.out.println(ntc.getDate());
 
-			Notice ntc = new Notice("En titel", "su3.eduhost.dk", "030208", 0);
-			System.out.println(ntc.getDate());
-
-		} catch (ParseException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 	}
 
 	/**

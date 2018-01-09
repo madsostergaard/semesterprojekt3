@@ -2,6 +2,7 @@ package serverside;
 
 import java.io.*;
 import java.net.*;
+import java.util.StringTokenizer;
 import java.util.UUID;
 
 import javax.xml.parsers.SAXParser;
@@ -65,7 +66,7 @@ class XMLHandler extends DefaultHandler {
 			out += "Indkaldelser:";
 			for (int i = 0; i < items.length; i++)
 				out += "\t" + items[i];
-			out += "\t";
+			out += "\n";
 		}
 		for (int k = 0; k < params.length; k++) {
 			if (PARAMS[k].equals(localName))
@@ -79,6 +80,16 @@ class XMLHandler extends DefaultHandler {
 	}
 
 	public String getOutput() {
+		
+		Notice n = new Notice("","","",0);
+		StringTokenizer st = new StringTokenizer(out,"\t");
+		String uuid = st.nextToken();
+		Notices not = new Notices(uuid);
+
+		while(st.hasMoreTokens()){
+			
+		}
+		
 		String output = out;
 		out = "";
 		return output;

@@ -12,7 +12,7 @@ public class Notice {
 	private String URL;
 	private int hospID;
 
-	Notice(String title, String URL, String date, int hospID) throws ParseException {
+	Notice(String title, String URL, String date, int hospID) {
 		this.date = date;
 		this.title = title;
 		this.URL = URL;

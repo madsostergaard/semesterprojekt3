@@ -6,6 +6,7 @@ public class Notices {
 
 	private String uuid;
 	private ArrayList<Notice> notice;
+	private String status;
 
 	Notices(String uuid) {
 
