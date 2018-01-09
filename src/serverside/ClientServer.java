@@ -1,9 +1,13 @@
 package serverside;
+
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class ClientServer {
 	private static Config conf = null;
@@ -16,14 +20,14 @@ public class ClientServer {
 	private static XMLHandler handler = new XMLHandler();
 	private static MakeParser parser;
 	private static XMLWriter writer;
+	private static DatabaseConnection dtb;
 	private static ArrayList<String> ip = new ArrayList<>();
 	private static ArrayList<String> types = new ArrayList<>();
 	private static final String IPADDRESS = "ip";
 	private static final String MESSAGE_TYPES = "msgtype";
-	private static final String REPLY = "reply";
-	private static final String NOTICE = "indkaldelse";
-	private static final String NOTICES = "indkaldelser";
-	private static final String REQUEST = "request";
+	private static final String REPLY = "rpl";
+	private static final String NOTICE = "ntc";
+	private static final String REQUEST = "rqst";
 
 	/**
 	 * Method for validating the received packet
@@ -63,6 +67,7 @@ public class ClientServer {
 		receiveData = new byte[1024];
 		sendData = new byte[1024];
 		msgType = "";
+		dtb = DatabaseConnection.getInstance();
 
 		handler = new XMLHandler();
 		parser = new MakeParser(handler);
@@ -97,49 +102,130 @@ public class ClientServer {
 				sendData = new byte[1024];
 
 				switch (msgType) {
-				case "request":
-					sendData = receiveData;
+				case REQUEST:
+					// get senders ip and port number
 					InetAddress IPAddress = receivePacket.getAddress();
 					int port = receivePacket.getPort();
-					sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
-					socket.send(sendPacket);
 
-					String received = new String(receiveData, 0, receiveData.length);
+					// remove unreadable chars
+					String received = new String(receivePacket.getData(), 0, receivePacket.getLength());
+
+					// maybe redundant
 					int pos = received.lastIndexOf(">");
 					received = received.substring(0, pos + 1);
+
+					// convert to input stream and parse
 					InputStream is = new ByteArrayInputStream(received.getBytes());
 					parser.parse(is);
 					String data = handler.getOutput();
 					st = new StringTokenizer(data, "\t");
 					String uuid = st.nextToken();
+
+					// write response
+					int status = 21;
+					Notices notices = dtb.getNotices(uuid);
+					ArrayList<Notice> list = notices.getNotice();
+					int size = list.size();
+
+					// only send one packet
+					if (size > 0 && size <= 5) {
+						status = 21;
+
+						writer.reset();
+						writer.writeStart(REPLY);
+						writer.writeTag("uuid", uuid, true);
+						writer.writeTag("plc", "03", true);
+						writer.writeTag("status", "" + status, true);
+						for (Notice n : list) {
+							writer.writeStart(NOTICE);
+							ArrayList<String> dt = DateUtil.toXML(n.getDate());
+							writer.writeTag("date", dt.get(0), true);
+							writer.writeTag("time", dt.get(1), true);
+							writer.writeTag("titl", n.getTitle(), true);
+							writer.writeTag("url", n.getURL(), true);
+							writer.writeEnd(NOTICE);
+						}
+
+						writer.writeEnd(REPLY);
+
+						sendData = new byte[1024];
+						sendData = writer.getXML().getBytes();
+
+						sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
+						socket.send(sendPacket);
+						break;
+					}
+
+					// send more packets
+					else if (size > 5) {
+						status = 20;
+						int msgCount = (int) Math.ceil(size / 5);
+						int k = 0;
+
+						for (int i = 1; i <= msgCount; i++) {
+							if (i == msgCount)
+								status = 21;
+							writer.reset();
+							writer.writeStart(REPLY);
+							writer.writeTag("uuid", uuid, true);
+							writer.writeTag("plc", "03", true);
+							writer.writeTag("status", "" + status, true);
+							while ((k + 1) % 5 != 0 && (k + 1) < size) {
+								writer.writeStart(NOTICE);
+								ArrayList<String> dt = DateUtil.toXML(list.get(k).getDate());
+								writer.writeTag("date", dt.get(0), true);
+								writer.writeTag("time", dt.get(1), true);
+								writer.writeTag("titl", list.get(k).getTitle(), true);
+								writer.writeTag("url", list.get(k).getURL(), true);
+								writer.writeEnd(NOTICE);
+
+								k++;
+							}
+							writer.writeEnd(REPLY);
+
+							sendData = new byte[1024];
+							sendData = writer.getXML().getBytes();
+
+							sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
+							socket.send(sendPacket);
+						}
+					}
+
+					// no notices
+					else if (size == 0) {
+						status = 01;
+
+						writer.reset();
+						writer.writeStart(REPLY);
+						writer.writeTag("uuid", uuid, true);
+						writer.writeTag("plc", "03", true);
+						writer.writeTag("status", "" + status, true);
+						writer.writeEnd(REPLY);
+
+						sendData = new byte[1024];
+						sendData = writer.getXML().getBytes();
+
+						sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
+						socket.send(sendPacket);
+					}
+					break;
+
+				case "begin":
+					// send OK:
+					IPAddress = receivePacket.getAddress();
+					port = receivePacket.getPort();
+
 					writer.reset();
 					writer.writeStart(REPLY);
-					writer.writeTag("uuid", uuid, true);
-					writer.writeTag("hospitalid", "3", true);
-					writer.writeTag("antalindkaldelser", "0", true);
-					// TODO: find person in database: ArrayList<String> notices
-					// =
-					// dtb.getNotices(uuid);
-					// int count = notices.size();
-					// for (String s : notices){
-					// lav noget smart
+					writer.writeTag("stat", "00", true);
 					writer.writeEnd(REPLY);
 
 					sendData = new byte[1024];
 					sendData = writer.getXML().getBytes();
-
 					sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
 					socket.send(sendPacket);
 
-					break;
-
-				case "begin":
-					sendData = receiveData;
-					IPAddress = receivePacket.getAddress();
-					port = receivePacket.getPort();
-					sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
-					socket.send(sendPacket);
-
+					// read msg
 					received = new String(receiveData, 0, receiveData.length);
 					pos = received.lastIndexOf(">");
 					received = received.substring(0, pos + 1);
@@ -148,6 +234,57 @@ public class ClientServer {
 					data = handler.getOutput();
 					st = new StringTokenizer(data, "\t");
 					uuid = st.nextToken();
+
+					// make threads for each hospital
+					for (String s : ip) {
+						new Thread() {
+							public void sendPacket() {
+								writer.reset();
+								writer.writeStart(REQUEST);
+								writer.writeTag("cmd", "01", true);
+								writer.writeTag("prm", uuid, true);
+								writer.writeEnd(REQUEST);
+
+								try {
+									InetAddress sendAddress = InetAddress.getByName(s);
+									int port = 9876; // maybe something more specific
+
+									sendData = new byte[1024];
+									sendData = writer.getXML().getBytes();
+									sendPacket = new DatagramPacket(sendData, sendData.length, sendAddress, port);
+
+									socket.send(sendPacket);
+								} catch (UnknownHostException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								} catch (IOException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+
+							}
+
+							public void run() {
+								sendPacket();
+								Timer timer = new Timer();
+								timer.schedule(new TimerTask() {
+									public void run() {
+										sendPacket();
+									}
+								}, 5000);
+								try {
+									receiveData = new byte[1024];
+									receivePacket = new DatagramPacket(receiveData, receiveData.length);
+									socket.receive(receivePacket);
+									timer.cancel();
+								} catch (IOException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+							}
+
+						}.start();
+					}
 
 					writer.reset();
 					writer.writeStart(REQUEST);
@@ -160,10 +297,10 @@ public class ClientServer {
 
 					for (String s : ip) {
 						InetAddress temp = InetAddress.getByName(s);
-						if (temp.toString().equals("/127.0.0.1")) { 
+						if (temp.toString().equals("/127.0.0.1")) {
 							// TODO:
 							// skal
-																	// være !
+							// være !
 							sendPacket = new DatagramPacket(sendData, sendData.length, temp, port);
 							socket.send(sendPacket);
 						}
@@ -171,58 +308,6 @@ public class ClientServer {
 
 					// TODO: check local database and put results into temp
 					// database
-
-					break;
-				case "reply":
-					received = new String(receiveData, 0, receiveData.length);
-					pos = received.lastIndexOf(">");
-					received = received.substring(0, pos + 1);
-					is = new ByteArrayInputStream(received.getBytes());
-					parser.parse(is);
-					data = handler.getOutput();
-					System.out.println(data);
-
-					st = new StringTokenizer(data, "\t");
-					uuid = st.nextToken();
-					System.out.println(uuid);
-					String hospitalID = st.nextToken();
-					System.out.println(hospitalID);
-					int count = new Integer(st.nextToken());
-					System.out.println(count);
-					String[][] notices = new String[count][3];
-					for (int k = 0; k < notices.length; k++) {
-						for (int j = 0; j < notices[k].length; j++) {
-							notices[k][j] = "";
-						}
-					}
-					for (int i = 0; i < count; i++) {
-						if (st.hasMoreTokens())
-							st.nextToken();
-						if (st.hasMoreTokens())
-							notices[i][0] = st.nextToken();
-						if (st.hasMoreTokens())
-							notices[i][1] = st.nextToken();
-						if (st.hasMoreTokens())
-							notices[i][2] = st.nextToken();
-					}
-					for (int k = 0; k < notices.length; k++) {
-						for (int j = 0; j < notices[k].length; j++) {
-							System.out.println(notices[k][j]);
-						}
-					}
-
-					// TODO: save string array to session table
-
-					break;
-
-				case "quit":
-					sendData = receiveData;
-					IPAddress = receivePacket.getAddress();
-					port = receivePacket.getPort();
-					sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
-					socket.send(sendPacket);
-
-					running = false;
 
 					break;
 

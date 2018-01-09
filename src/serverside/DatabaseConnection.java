@@ -113,12 +113,12 @@ public class DatabaseConnection {
 		stmt.execute(sql);
 		stmt.close();
 	}
-	
-	private void insertStatement(String sql,  String[] params) throws SQLException{
+
+	private void insertStatement(String sql, String[] params) throws SQLException {
 		PreparedStatement stmt = conn.prepareStatement(sql);
 		int parNum = params.length;
-		for(int i = 0; i< parNum; i++){
-			stmt.setString(i+1, params[i]);
+		for (int i = 0; i < parNum; i++) {
+			stmt.setString(i + 1, params[i]);
 		}
 		stmt.execute();
 	}
@@ -133,20 +133,20 @@ public class DatabaseConnection {
 		return rs;
 	}
 
-	public void saveSessionNotices(String sessionid, Notices n) {
+	public void saveSessionNotices(String sessionid, Notices n) throws SQLException {
 		ArrayList<Notice> list = n.getNotice();
 		for (Notice nt : list) {
 			saveNotice(sessionid, nt);
 		}
 	}
 
-	private void saveNotice(String sessionid, Notice n) {
+	private void saveNotice(String sessionid, Notice n) throws SQLException {
 		String sql = "INSERT INTO hospital.sessionid (session_idsession, datotid, titel, url, sted, sted) VALUES (?,?,?,?,?,?);";
-		String [] param = {sessionid, n.getDate() + " " + n.getTime(), n.getTitle(), n.getURL(), n.getHospID() };
+		String[] param = { sessionid, n.getDate(), n.getTitle(), n.getURL(), "" + n.getHospID() };
 		insertStatement(sql, param);
 	}
 
-	public ArrayList<String> getNotices(String uuid) throws SQLException {
+	public Notices getNotices(String uuid) throws SQLException, Exception {
 		ArrayList<String> output = new ArrayList<>();
 		String temp; // string to add to output
 
@@ -156,20 +156,40 @@ public class DatabaseConnection {
 		stmt.setString(1, uuid);
 
 		ResultSet rs = stmt.executeQuery();
-
+		Notices notices = new Notices(uuid);
 		while (rs.next()) {
+			Notice n = new Notice("", "", "", 0);
+			String murl = "";
 			temp = ""; // skal være ID&overskrift&tidspunkt
-			temp += "" + rs.getInt(1);
-			temp += "&" + rs.getString(2);
+			murl = "su3.eduhost.dk/cgi-bin/SeeNotice?id=" + rs.getInt(1);
+			n.setURL(murl);
+			temp = /* "&" + */rs.getString(2);
+			n.setTitle(temp);
 			String date = rs.getDate(3).toLocalDate().toString();
-			temp += "&" + date.toString();
 			String time = rs.getTime(3).toLocalTime().toString();
+			n.setDate(date + " " + time);
+			temp += "&" + date.toString();
 			temp += " " + time.toString();
-			// log.debug("Found notice, adding to output {}", temp);
+			temp += "&" + murl;
 			output.add(temp);
+			notices.addNotice(n);
 		}
 
-		return output;
+		return notices;
+	}
+	
+	public String getSessionFromUUID(String uuid){
+		String sessionid = "";
+		String sql = "SELECT idSession FROM hospital.session WHERE uuid = ?";
+		String [] par = {uuid};
+		try {
+			ResultSet rs = query(sql,par);
+			if(rs.next()) sessionid = ""+rs.getInt(1);
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return sessionid;
 	}
 
 	public String getNoticeDetails(int id) throws SQLException, ParseException {
@@ -195,14 +215,7 @@ public class DatabaseConnection {
 		return output;
 	}
 
-	/**
-	 * Just for test
-	 */
-	public void makeNotice() {
-
-	}
-
-	public static void main(String[] args) throws SQLException, ClassNotFoundException {
+	public static void main(String[] args) throws Exception {
 
 		DatabaseConnection conn = DatabaseConnection.getInstance();
 		passWord = "Per1969"; // input fra web app i stedet.
@@ -231,13 +244,13 @@ public class DatabaseConnection {
 		boolean valLogin = conn.validate(passWord, cpr, uuid);
 		System.out.println(valLogin);
 
-		ArrayList<String> list = conn.getNotices(uuid);
-		for (String s : list) {
-			System.out.println(s);
-			// StringTokenizer st = new StringTokenizer("&");
-			String datetime = s.substring(s.length() - 19);
-			System.out.println(datetime);
-		}
+		Notices list = conn.getNotices(uuid);
+		// for (Notice s : list) {
+		// System.out.println(s);
+		// // StringTokenizer st = new StringTokenizer("&");
+		// String datetime = "";//s.substring(s.length() - 19);
+		// System.out.println(datetime);
+		// }
 
 		try {
 
