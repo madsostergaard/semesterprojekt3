@@ -1,4 +1,5 @@
 package serverside;
+
 import java.io.*;
 import java.net.*;
 import java.util.UUID;
@@ -11,10 +12,10 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 class XMLHandler extends DefaultHandler {
-	private final String XMLNAME = "indkaldelser";
-	private final String ITEMNAME = "indkaldelse";
-	private final String[] PARAMS = { "uuid", "hospitalid", "antalindkaldelser" };
-	private final String[] ITEMS = { "datotid", "titel", "url" };
+
+	private final String ITEMNAME = "ntc";
+	private final String[] PARAMS = { "uuid", "stat", "plc"};
+	private final String[] ITEMS = { "date", "time", "titl", "url" };
 	private String[] items = new String[ITEMS.length];
 	private String[] params = new String[PARAMS.length];
 	private String out = "";
@@ -70,9 +71,9 @@ class XMLHandler extends DefaultHandler {
 			if (PARAMS[k].equals(localName))
 				out += params[k] + "\t";
 		}
-		if (XMLNAME.equals(localName)) {
-			//out += "Antal indkaldelser i XML besked: " + antalBeskeder();
-		}
+		/*if (XMLNAME.equals(localName)) {
+			// out += "Antal indkaldelser i XML besked: " + antalBeskeder();
+		}*/
 		indeks = -1;
 		paramIndeks = -1;
 	}
