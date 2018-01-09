@@ -67,57 +67,83 @@ public class DatabaseConnection {
 
 		return bol;
 	}
-	
+
 	/**
 	 * Builds a Notices-object from the notices in the database
-	 * @param sessionid the id of the session
-	 * @return a Notices-object containing all the present notices 
-	 * @throws SQLException 
-	 * @throws ParseException 
+	 * 
+	 * @param sessionid
+	 *            the id of the session
+	 * @return a Notices-object containing all the present notices
+	 * @throws SQLException
+	 * @throws ParseException
 	 */
-	public Notices getSessionNotices(String sessionid) throws SQLException, ParseException{
+	public Notices getSessionNotices(String sessionid) throws SQLException, ParseException {
 		String uuid = "";
 		String sql = "SELECT uuid FROM session WHERE idSession = ?";
 		PreparedStatement stmt = conn.prepareStatement(sql);
 		stmt.setString(1, sessionid);
 		ResultSet rs = stmt.executeQuery();
-		
-		if(rs.next()){
+
+		if (rs.next()) {
 			uuid = rs.getString(1);
 		}
-		
+
 		Notices notices = new Notices(uuid);
-		
+
 		sql = "SELECT datotid, titel, url, sted FROM sessionNotice WHERE session_idsession = ?";
 		stmt = conn.prepareStatement(sql);
 		stmt.setString(1, sessionid);
 		rs = stmt.executeQuery();
-		
-		while(rs.next()){
+
+		while (rs.next()) {
 			String time = rs.getTime(1).toLocalTime().toString();
 			String date = rs.getDate(1).toLocalDate().toString();
 			String title = rs.getString(2);
 			String url = rs.getString(3);
 			int sted = rs.getInt(4);
-			Notice n = new Notice(title, url, date+" "+time, sted);
+			Notice n = new Notice(title, url, date + " " + time, sted);
 			notices.addNotice(n);
 		}
-		
+
 		return notices;
 	}
+
+	private void insertStatement(String sql) throws SQLException {
+		Statement stmt = conn.createStatement();
+		stmt.execute(sql);
+		stmt.close();
+	}
 	
-	
-	public void saveSessionNotices(String sessionid, Notices n){		
+	private void insertStatement(String sql,  String[] params) throws SQLException{
+		PreparedStatement stmt = conn.prepareStatement(sql);
+		int parNum = params.length;
+		for(int i = 0; i< parNum; i++){
+			stmt.setString(i+1, params[i]);
+		}
+		stmt.execute();
+	}
+
+	private ResultSet query(String sql, String[] params) throws SQLException {
+		PreparedStatement stmt = conn.prepareStatement(sql);
+		int parNum = params.length;
+		for (int i = 0; i < parNum; i++) {
+			stmt.setString(i + 1, params[i]);
+		}
+		ResultSet rs = stmt.executeQuery();
+		return rs;
+	}
+
+	public void saveSessionNotices(String sessionid, Notices n) {
 		ArrayList<Notice> list = n.getNotice();
-		for(Notice nt : list){
+		for (Notice nt : list) {
 			saveNotice(sessionid, nt);
 		}
 	}
-	
-	
-	public void saveNotice(String sessionid, Notice n){
-		String sql = "";
-		
+
+	private void saveNotice(String sessionid, Notice n) {
+		String sql = "INSERT INTO hospital.sessionid (session_idsession, datotid, titel, url, sted, sted) VALUES (?,?,?,?,?,?);";
+		String [] param = {sessionid, n.getDate() + " " + n.getTime(), n.getTitle(), n.getURL(), n.getHospID() };
+		insertStatement(sql, param);
 	}
 
 	public ArrayList<String> getNotices(String uuid) throws SQLException {
@@ -125,6 +151,7 @@ public class DatabaseConnection {
 		String temp; // string to add to output
 
 		String sql = "SELECT idIndkaldelse, overskrift, tidspunkt FROM hospital.Indkaldelse WHERE Patient_CPR_UUID = ?;";
+
 		PreparedStatement stmt = conn.prepareStatement(sql);
 		stmt.setString(1, uuid);
 
@@ -160,7 +187,7 @@ public class DatabaseConnection {
 
 		// den nye getNoticeDetails?
 		if (rs.next()) {
-			Notice ntc = new Notice(rs.getString(1), rs.getString(2), rs.getDate(3).toLocalDate().toString(),0);
+			Notice ntc = new Notice(rs.getString(1), rs.getString(2), rs.getDate(3).toLocalDate().toString(), 0);
 
 		}
 		// return ntc;
@@ -168,37 +195,61 @@ public class DatabaseConnection {
 		return output;
 	}
 
+	/**
+	 * Just for test
+	 */
+	public void makeNotice() {
+
+	}
+
 	public static void main(String[] args) throws SQLException, ClassNotFoundException {
 
 		DatabaseConnection conn = DatabaseConnection.getInstance();
 		passWord = "Per1969"; // input fra web app i stedet.
 		cpr = "2808694625"; // input fra web app i stedet. ¨
+		// String sql = "INSERT INTO hospital.Indkaldelse
+		// (detaljer,overskrift,tidspunkt,Patient_idPatient,Patient_CPR_uuid)
+		// VALUES ('Test en indkaldelse med detaljer2', 'Testen er vild2',
+		// '2017-10-12 03:04:05', 3, '0943d433-3566-4caa-829c-1f19eda428de');";
+		// conn.insertStatement(sql);
+		// sql = "SELECT overskrift, detaljer, tidspunkt FROM
+		// hospital.Indkaldelse WHERE idIndkaldelse = ?;";
 		String uuid = conn.downloadUUID(passWord, cpr);
+		// String [] param = { "1" };
+		// ResultSet rs = conn.query(sql, param);
+		// while(rs.next()){
+		// String temp = ""; // skal være ID&overskrift&tidspunkt
+		// temp += "" + rs.getString(1);
+		// temp += "&" + rs.getString(2);
+		// String date = rs.getDate(3).toLocalDate().toString();
+		// temp += "&" + date.toString();
+		// String time = rs.getTime(3).toLocalTime().toString();
+		// temp += " " + time.toString();
+		// System.out.println(temp + "\n");
+		// }
 		System.out.println(uuid);
 		boolean valLogin = conn.validate(passWord, cpr, uuid);
 		System.out.println(valLogin);
-		
+
 		ArrayList<String> list = conn.getNotices(uuid);
-		for(String s : list){
+		for (String s : list) {
 			System.out.println(s);
-			//StringTokenizer st = new StringTokenizer("&");
-			String datetime = s.substring(s.length()-19);
+			// StringTokenizer st = new StringTokenizer("&");
+			String datetime = s.substring(s.length() - 19);
 			System.out.println(datetime);
 		}
-		
+
 		try {
-			
-			Notice ntc = new Notice("En titel", "su3.eduhost.dk", "030208",0);
+
+			Notice ntc = new Notice("En titel", "su3.eduhost.dk", "030208", 0);
 			System.out.println(ntc.getDate());
-			
-			
-			
+
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
-	
+
 	/**
 	 * for testing connection
 	 * 
