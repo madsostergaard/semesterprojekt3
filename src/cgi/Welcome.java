@@ -9,11 +9,21 @@ import java.io.InputStreamReader;
 import java.sql.SQLException;
 import java.util.*;
 
+import serverside.Client;
+import serverside.Notice;
+import serverside.Notices;
+
+/**
+ * CGI klasse til at håndtere login. 
+ * @author Mads Østergaard
+ *
+ */
 public class Welcome extends CGI {
 
 	// private static final Logger log = LoggerFactory.getLogger(Welcome.class);
-	private static ArrayList<String> notices;
+	//private static ArrayList<String> notices;
 	private static String passWord, cpr, uuid;
+	private static Client client;
 
 	private static void handleArgs(StringTokenizer t) {
 		String field;
@@ -46,17 +56,21 @@ public class Welcome extends CGI {
 	}
 
 	protected static void showBody() {
-
+		Notices notices = null;
 		try {
 			notices = dtb.getNotices(uuid);
 		} catch (SQLException e) {
-			// log.error("Exception in retrieving notices {}", e);
 			notices = null;
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
+		
+		ArrayList<Notice> list = new ArrayList<>(); 
+		if(notices != null) list = notices.getNotice();
 
 		System.out.println("<P ALIGN=\"CENTER\">");
 		// indhent indkaldelser fra databasen
-		if (notices == null || notices.size() == 0) { // no data
+		if (notices == null || list.size() == 0) { // no data
 			System.out.println("Ingen indkaldelser!</P>");
 		}
 		// ellers er der indkaldelser
@@ -66,32 +80,16 @@ public class Welcome extends CGI {
 			System.out.println("	<TH>Dato og tid</TH>");
 			System.out.println("	<TH>Detajler</TH>");
 			System.out.println("</TR>");
-			for (int i = 0; i < notices.size(); i++) {
-				String temp = notices.get(i);
+			for (int i = 0; i < list.size(); i++) {
+				Notice temp = list.get(i);
 
-				StringTokenizer t = new StringTokenizer(temp, "&");
-
-				String noticeID = t.nextToken(); // get
-													// the
-													// noticeID
-													// for
-													// database
-													// connection
-				String title = t.nextToken(); // get the
-												// description
-												// (which
-												// is a
-												// link
-												// to
-												// the
-												// notice)
-				String date = t.nextToken();
-				; // get the date
+				String url = temp.getURL(); 
+				String title = temp.getTitle();
+				String date = temp.getDate();
 
 				System.out.println("<TR><TD>" + date);
 				System.out.println("</TD><TD>");
-				System.out.println("<A HREF=\"http://su8.eduhost.dk/cgi-bin/Notices?id=" + noticeID
-						+ /* do we need more attributes? */"\">");
+				System.out.println("<A HREF=\"http://"+url+ /* do we need more attributes? */"\">");
 				System.out.println(title + "</A></TD></TR>");
 			}
 			System.out.println("</TABLE>");
@@ -120,6 +118,9 @@ public class Welcome extends CGI {
 			// log.error("Tried to validate user {}", e);
 		}
 		if (isUserValid) {
+			client = new Client();
+			String status = client.sendRequests(uuid);
+			
 			showHead();
 			showMenu();
 			showTitle("Denne side viser dine kommende indkaldelser til hospitalet.");
