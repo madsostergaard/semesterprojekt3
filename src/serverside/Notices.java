@@ -5,8 +5,8 @@ import java.util.ArrayList;
 public class Notices {
 
 	private String uuid;
-	private ArrayList<Notice> notice;
 	private String status;
+	private ArrayList<Notice> notice;
 
 	Notices(String uuid) {
 
@@ -37,9 +37,18 @@ public class Notices {
 	}
 
 	public void addNotice(Notice notice) {
-
+		if (this.notice == null)
+			this.notice = new ArrayList<>();
 		this.notice.add(notice);
 
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
 	}
 
 }
