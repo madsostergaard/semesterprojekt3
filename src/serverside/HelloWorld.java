@@ -10,7 +10,6 @@ public class HelloWorld {
 	public static void main(String[] args) throws Exception{
 		
 		System.out.println("Kommer du tit her? ;pPpPPp");
-		
 	}
 
 }
