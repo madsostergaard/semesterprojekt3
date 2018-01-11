@@ -107,6 +107,46 @@ public class DatabaseConnection {
 
 		return notices;
 	}
+	
+	private void clearSessionNotices(String idSession){
+		String sql = "DELETE FROM hospital.sessionnotices WHERE session_idsession = "+idSession+";";
+		try{
+			insertStatement(sql);
+		} catch(SQLException e){
+			
+		}
+	}
+
+	public String createSession(String uuid) {
+		// check if session is active
+		String query = "SELECT idSession FROM hospital.session WHERE uuid = " + uuid + ";";
+		String remove = "DELETE FROM hospital.session WHERE idSession = ";
+		String sql = "INSERT INTO hospital.session (uuid) VALUES (" + uuid + ");";
+		String session = "";
+		try {
+			ResultSet rs = query(query, new String[0]);
+			if(rs.next()){
+				session = rs.getString(1);
+				remove += session+";";
+				clearSessionNotices(session); // remove tables with foreign keys
+				insertStatement(remove); // remove old cookie
+			}
+
+			// create session
+			insertStatement(sql);
+			
+			// find session id to return
+			rs = query(query, new String[0]);
+			if(rs.next()){
+				session = rs.getString(1);
+			}
+
+		} catch (SQLException e) {
+
+		}
+
+		return session;
+	}
 
 	private void insertStatement(String sql) throws SQLException {
 		Statement stmt = conn.createStatement();
@@ -117,8 +157,10 @@ public class DatabaseConnection {
 	private void insertStatement(String sql, String[] params) throws SQLException {
 		PreparedStatement stmt = conn.prepareStatement(sql);
 		int parNum = params.length;
-		for (int i = 0; i < parNum; i++) {
-			stmt.setString(i + 1, params[i]);
+		if (!(parNum == 0)) {
+			for (int i = 0; i < parNum; i++) {
+				stmt.setString(i + 1, params[i]);
+			}
 		}
 		stmt.execute();
 	}
@@ -161,7 +203,7 @@ public class DatabaseConnection {
 			Notice n = new Notice("", "", "", 0);
 			String murl = "";
 			temp = ""; // skal være ID&overskrift&tidspunkt
-			murl = "su3.eduhost.dk/cgi-bin/SeeNotice?id=" + rs.getInt(1);
+			murl = "su3.eduhost.dk/cgi-bin/MyNotices?id=" + rs.getInt(1);
 			n.setURL(murl);
 			temp = /* "&" + */rs.getString(2);
 			n.setTitle(temp);
