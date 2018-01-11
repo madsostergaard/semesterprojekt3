@@ -12,8 +12,6 @@ import java.net.UnknownHostException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class Client {
 
@@ -32,8 +30,11 @@ public class Client {
 	private final int PORT = 1234;
 	private long timeoutGlobal = 3000; // check this value
 	private long timeout = 300;
-	private ArrayList<String> results;
-	private ArrayList<String> totals;
+	private static String outPassword = ""; 
+	private static String inPassword = ""; 
+	private static String returnDomain = ""; 
+	private static final String THIS_IP = "198.168.239.23";
+	
 
 	public Client(/* portnumber?? */) {
 		try {
@@ -58,7 +59,7 @@ public class Client {
 			handler = new XMLHandler();
 			parser = new MakeParser(handler);
 			writer = new XMLWriter();
-			
+				
 			receiveData = new byte[1024];
 			sendData = new byte[1024];
 
@@ -68,12 +69,12 @@ public class Client {
 		}
 	}
 
-	private void sendPacket(String ip, String uuid/* ,String pass */) {
+	private void sendPacket(String ip, String uuid ,String pass ) {
 		writer.reset();
 		writer.writeStart(REQUEST);
 		writer.writeTag("cmd", "01", true);
 		writer.writeTag("prm", uuid, true);
-		writer.writeTag("pass", "", true);
+		writer.writeTag("pass", pass, true);
 		writer.writeEnd(REQUEST);
 
 		try {
@@ -93,10 +94,19 @@ public class Client {
 			e.printStackTrace();
 		}
 	}
+	
+	private void setParams(String id){
+		String info = conf.confValue(id);
+		String[] splitted = info.split(",");
+		outPassword = splitted[0];
+		inPassword = splitted[1];
+		returnDomain = splitted[2];
+	}
 
 	public String sendRequests(String uuid) {
 		//saveLocalNotices(uuid);
 		String sessionid = "";//dtb.getSessionFromUUID(uuid);
+		
 
 		int size = ips.size();
 		int[][] state = new int[size][2];
@@ -109,9 +119,11 @@ public class Client {
 		String status = "";
 
 		for (String ip : ips) {
-			// find password, save in a string, use as paramter
+			if(ip == THIS_IP){continue;}
+			String id = conf.confValue(ip);
+			setParams(id);
 
-			sendPacket(ip, uuid);
+			sendPacket(ip, uuid, outPassword);
 		}
 
 		long t1 = System.currentTimeMillis();
@@ -130,6 +142,9 @@ public class Client {
 				int place = new Integer(data[2]);
 				String pass = data[3];
 				
+				setParams(""+place);
+				
+				if(pass != inPassword) break;
 				// TODO: check for password
 				
 				state[place - 1][0] += 1;
@@ -148,7 +163,6 @@ public class Client {
 					if(isOK && k!= 2) status += k+1+":OK,";
 				}
 				if(ok) break;
-
 			} catch (SocketTimeoutException e2) {
 				// protocol timeout: 
 				for (int k = 0; k < state.length; k++) {
@@ -156,11 +170,8 @@ public class Client {
 
 					if (!isOK && k != 2) {
 						int place = k+1;
-						//System.out.println(place);
-						String temp = conf.confValue("" + place);
-						String domain = temp.substring(temp.lastIndexOf(",")+1);
-						//System.out.println(domain);
-						sendPacket(domain, uuid);
+						setParams(""+place);
+						sendPacket(returnDomain, uuid, outPassword);
 					}
 				}
 			} catch (IOException e) {
