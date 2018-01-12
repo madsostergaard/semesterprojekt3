@@ -17,7 +17,7 @@ class XMLHandler extends DefaultHandler {
 
 	private final String ITEMNAME = "ntc";
 	private final String[] PARAMS = { "uuid", "stat", "plc", "pass", "seq", "total"};
-	private final String[] REQ = { "prm", "cmd", "pass" };
+	private final String[] REQ = { "prm", "cmd", "pass", "id" };
 	private final String[] ITEMS = { "date", "time", "titl", "url" };
 	private String[] items = new String[ITEMS.length];
 	private String[] params = new String[PARAMS.length];
@@ -93,6 +93,10 @@ class XMLHandler extends DefaultHandler {
 		reqIndeks = -1;
 	}
 	
+	/**
+	 * 
+	 * @return params: [prm, cmd, pass]
+	 */
 	public String[] getRequest(){
 		return req;
 	}
@@ -111,7 +115,7 @@ class XMLHandler extends DefaultHandler {
 		String uuid = params[0];
 		Notices notices = new Notices(uuid);
 		String plc = params[2];
-		System.out.println(out);
+		//System.out.println(out);
 		ArrayList<Notice> aList = new ArrayList<>();
 		
 		for(int k = 0; k<antalIndkaldelser; k++){

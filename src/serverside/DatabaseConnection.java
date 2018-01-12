@@ -25,6 +25,7 @@ public class DatabaseConnection {
 			Class.forName("com.mysql.jdbc.Driver").newInstance();
 			conn = DriverManager.getConnection(url, user, pass);
 		} catch (Exception e) {
+			System.out.println("Not possible to make database connection!");
 			System.exit(0);
 		}
 	}
@@ -79,7 +80,7 @@ public class DatabaseConnection {
 	 */
 	public Notices getSessionNotices(String sessionid) throws SQLException, ParseException {
 		String uuid = "";
-		String sql = "SELECT uuid FROM session WHERE idSession = ?";
+		String sql = "SELECT uuid FROM hospital.session WHERE idSession = ?";
 		PreparedStatement stmt = conn.prepareStatement(sql);
 		stmt.setString(1, sessionid);
 		ResultSet rs = stmt.executeQuery();
@@ -90,7 +91,7 @@ public class DatabaseConnection {
 
 		Notices notices = new Notices(uuid);
 
-		sql = "SELECT datotid, titel, url, sted FROM sessionNotice WHERE session_idsession = ?";
+		sql = "SELECT datotid, titel, url, sted FROM hospital.sessionNotice WHERE session_idsession = ? AND datotid > now()";
 		stmt = conn.prepareStatement(sql);
 		stmt.setString(1, sessionid);
 		rs = stmt.executeQuery();
@@ -107,45 +108,48 @@ public class DatabaseConnection {
 
 		return notices;
 	}
-	
-	private void clearSessionNotices(String idSession){
-		String sql = "DELETE FROM hospital.sessionnotices WHERE session_idsession = "+idSession+";";
-		try{
+
+	private void clearSessionNotices(String idSession) {
+		String sql = "DELETE FROM hospital.sessionnotices WHERE session_idsession = " + idSession + " OR session_idSession is null;";
+		try {
 			insertStatement(sql);
-		} catch(SQLException e){
-			
+		} catch (SQLException e) {
+
 		}
 	}
 
 	public String createSession(String uuid) {
 		// check if session is active
-		String query = "SELECT idSession FROM hospital.session WHERE uuid = " + uuid + ";";
+		
+		String query = "SELECT idSession FROM hospital.session WHERE uuid = '" + uuid + "';";
 		String remove = "DELETE FROM hospital.session WHERE idSession = ";
-		String sql = "INSERT INTO hospital.session (uuid) VALUES (" + uuid + ");";
+		long number = (long) (Math.random() * 1000000000);
+		String newSes = ""+number;
+		String sql = "INSERT INTO hospital.session (idSession,uuid) VALUES ("+newSes+",'" + uuid + "');";
 		String session = "";
 		try {
 			ResultSet rs = query(query, new String[0]);
-			if(rs.next()){
+			if (rs.next()) {
 				session = rs.getString(1);
-				remove += session+";";
+				remove += session + ";";
 				clearSessionNotices(session); // remove tables with foreign keys
 				insertStatement(remove); // remove old cookie
 			}
-
+			
 			// create session
 			insertStatement(sql);
-			
+
 			// find session id to return
 			rs = query(query, new String[0]);
-			if(rs.next()){
+			if (rs.next()) {
 				session = rs.getString(1);
 			}
 
 		} catch (SQLException e) {
-
+			e.printStackTrace();
 		}
 
-		return session;
+		return newSes;
 	}
 
 	private void insertStatement(String sql) throws SQLException {
@@ -177,14 +181,25 @@ public class DatabaseConnection {
 
 	public void saveSessionNotices(String sessionid, Notices n) throws SQLException {
 		ArrayList<Notice> list = n.getNotice();
-		for (Notice nt : list) {
-			saveNotice(sessionid, nt);
-		}
+		if (list != null) {
+			for (Notice nt : list) {
+				//System.out.println(nt.toString());
+				saveNotice(sessionid, nt);
+			}
+		}else System.out.println("List was null!");
 	}
 
 	private void saveNotice(String sessionid, Notice n) throws SQLException {
-		String sql = "INSERT INTO hospital.sessionid (session_idsession, datotid, titel, url, sted, sted) VALUES (?,?,?,?,?,?);";
-		String[] param = { sessionid, n.getDate(), n.getTitle(), n.getURL(), "" + n.getHospID() };
+		String datetime = n.getDate();
+		String date = datetime.substring(0,datetime.indexOf(" "));
+		String time = datetime.substring(datetime.indexOf(" ")+1);
+		
+		String sql = "INSERT INTO hospital.sessionNotice (session_idSession, datotid, titel, url, sted) VALUES (?,?,?,?,?);";
+		String[] param = { sessionid, DateUtil.toDatabase(date,time), n.getTitle(),  n.getURL() , ""+n.getHospID() };
+		String query = "SELECT idsessionNotice FROM hospital.sessionNotice WHERE session_idSession=? AND  datotid=? AND titel=? AND url=? AND sted=?;";
+		ResultSet rs = query(query, param);
+		if (rs.next())
+			return; // notice is already in database, return void
 		insertStatement(sql, param);
 	}
 
@@ -192,7 +207,7 @@ public class DatabaseConnection {
 		ArrayList<String> output = new ArrayList<>();
 		String temp; // string to add to output
 
-		String sql = "SELECT idIndkaldelse, overskrift, tidspunkt FROM hospital.Indkaldelse WHERE Patient_CPR_UUID = ?;";
+		String sql = "SELECT idIndkaldelse, overskrift, tidspunkt FROM hospital.Indkaldelse WHERE Patient_CPR_UUID = ? AND tidspunkt > now();";
 
 		PreparedStatement stmt = conn.prepareStatement(sql);
 		stmt.setString(1, uuid);

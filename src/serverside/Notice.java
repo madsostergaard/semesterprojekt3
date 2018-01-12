@@ -50,5 +50,9 @@ public class Notice {
 	public void setHospID(int hospID) {
 		this.hospID = hospID;
 	}
+	
+	public String toString(){
+		return date +" "+title+" "+URL+" "+hospID;
+	}
 
 }

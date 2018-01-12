@@ -1,4 +1,6 @@
 package cgi;
+import java.util.StringTokenizer;
+
 import serverside.DatabaseConnection;
 
 //import org.slf4j.Logger;
@@ -11,6 +13,23 @@ public class CGI{
 	protected static String cookie;
 	protected static String session;
 	//protected static final Logger log = LoggerFactory.getLogger(CGI.class);
+	
+	protected static void handleCookies(StringTokenizer t) {
+	      String field;
+	      while ( t.hasMoreTokens() ) {
+	         field = t.nextToken();
+	         if (field != null) {
+	            field.trim();
+	            StringTokenizer tt = new StringTokenizer(field,"=\n\r");
+	            String s = tt.nextToken();
+	            if ( s.equals("__session") ) {
+	               s = tt.nextToken();
+	               if ( s != null )
+	                  session = s;
+	            }
+	         }
+	      }
+	   }
 	
 	/**
 	 * Prints the head of the HTML page.
@@ -82,7 +101,9 @@ public class CGI{
 	}
 	
 	public static void main(String[] args){
+		
 		//log.info("Showing default page");
+		
 		showHead();
 		showTitle("Default side");
 		showMenu();

@@ -14,15 +14,16 @@ import serverside.Notice;
 import serverside.Notices;
 
 /**
- * CGI klasse til at håndtere login. 
+ * CGI klasse til at håndtere login.
+ * 
  * @author Mads Østergaard
  *
  */
 public class Welcome extends CGI {
 
 	// private static final Logger log = LoggerFactory.getLogger(Welcome.class);
-	//private static ArrayList<String> notices;
-	private static String passWord, cpr, uuid;
+	// private static ArrayList<String> notices;
+	private static String passWord, cpr, uuid, sessionid;
 	private static Client client;
 
 	private static void handleArgs(StringTokenizer t) {
@@ -58,44 +59,47 @@ public class Welcome extends CGI {
 	protected static void showBody() {
 		Notices notices = null;
 		try {
-			notices = dtb.getNotices(uuid);
+			notices = dtb.getSessionNotices(sessionid);
+
+			ArrayList<Notice> list = new ArrayList<>();
+			if (notices != null)
+				list = notices.getNotice();
+
+			System.out.println("<P ALIGN=\"CENTER\">");
+			// indhent indkaldelser fra databasen
+			if (list == null || list.size() == 0) { // no data
+				System.out.println("Ingen indkaldelser!</P>");
+			}
+			// ellers er der indkaldelser
+			else {
+				System.out.println("<TABLE BORDER=\"1\">");
+				System.out.println("<TR>");
+				System.out.println("	<TH>Dato og tid</TH>");
+				System.out.println("	<TH>Detajler</TH>");
+				System.out.println("</TR>");
+				for (int i = 0; i < list.size(); i++) {
+					Notice temp = list.get(i);
+
+					String url = temp.getURL();
+					String title = temp.getTitle();
+					String date = temp.getDate();
+
+					System.out.println("<TR><TD>" + date);
+					System.out.println("</TD><TD>");
+					System.out.println("<A HREF=\"http://" + url
+							+ /* do we need more attributes? */"\">");
+					System.out.println(title + "</A></TD></TR>");
+				}
+				System.out.println("</TABLE>");
+				System.out.println("</P>");
+			}
+			System.out.println("<P ALIGN=\"CENTER\">");
 		} catch (SQLException e) {
 			notices = null;
+			e.printStackTrace();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
-		ArrayList<Notice> list = new ArrayList<>(); 
-		if(notices != null) list = notices.getNotice();
-
-		System.out.println("<P ALIGN=\"CENTER\">");
-		// indhent indkaldelser fra databasen
-		if (notices == null || list.size() == 0) { // no data
-			System.out.println("Ingen indkaldelser!</P>");
-		}
-		// ellers er der indkaldelser
-		else {
-			System.out.println("<TABLE BORDER=\"1\">");
-			System.out.println("<TR>");
-			System.out.println("	<TH>Dato og tid</TH>");
-			System.out.println("	<TH>Detajler</TH>");
-			System.out.println("</TR>");
-			for (int i = 0; i < list.size(); i++) {
-				Notice temp = list.get(i);
-
-				String url = temp.getURL(); 
-				String title = temp.getTitle();
-				String date = temp.getDate();
-
-				System.out.println("<TR><TD>" + date);
-				System.out.println("</TD><TD>");
-				System.out.println("<A HREF=\"http://"+url+ /* do we need more attributes? */"\">");
-				System.out.println(title + "</A></TD></TR>");
-			}
-			System.out.println("</TABLE>");
-			System.out.println("</P>");
-		}
-		System.out.println("<P ALIGN=\"CENTER\">");
 	}
 
 	public static void main(String[] args) {
@@ -109,6 +113,11 @@ public class Welcome extends CGI {
 			e.printStackTrace();
 		}
 
+		if (args.length > 1 && args[0] != null && args[0].length() > 0) {
+			cookie = args[0];
+			handleCookies(new StringTokenizer(cookie, ";\n\r"));
+		}
+
 		setCookie(""/* et eller andet */);
 
 		try {
@@ -118,9 +127,14 @@ public class Welcome extends CGI {
 			// log.error("Tried to validate user {}", e);
 		}
 		if (isUserValid) {
+			if (session == null){
+				sessionid=dtb.createSession(uuid);
+				System.out.println("Set-Cookie: __session=" + sessionid);
+			}
+				
 			client = new Client();
 			String status = client.sendRequests(uuid);
-			
+
 			showHead();
 			showMenu();
 			showTitle("Denne side viser dine kommende indkaldelser til hospitalet.");
