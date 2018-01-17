@@ -10,6 +10,7 @@ public class Notice {
 	private String date;
 	private String title;
 	private String URL;
+	private String desc;
 	private int hospID;
 
 	Notice(String title, String URL, String date, int hospID) {
@@ -17,6 +18,7 @@ public class Notice {
 		this.title = title;
 		this.URL = URL;
 		this.hospID = hospID;
+		desc = "";
 	}
 
 	public String getDate() {
@@ -53,6 +55,14 @@ public class Notice {
 	
 	public String toString(){
 		return date +" "+title+" "+URL+" "+hospID;
+	}
+	
+	public String getDetails(){
+		return desc;
+	}
+	
+	public void setDetails(String s){
+		desc = s;
 	}
 
 }

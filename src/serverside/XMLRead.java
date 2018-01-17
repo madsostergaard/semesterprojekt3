@@ -121,9 +121,13 @@ class XMLHandler extends DefaultHandler {
 		for(int k = 0; k<antalIndkaldelser; k++){
 			Notice notice = new Notice("","","",0);
 			notice.setDate(st.nextToken() + " " + st.nextToken());
+//			System.out.println(notice.getDate());
 			notice.setTitle(st.nextToken());
+//			System.out.println(notice.getTitle());
 			notice.setHospID(new Integer(plc));
+//			System.out.println(notice.getHospID());
 			notice.setURL(st.nextToken());
+//			System.out.println(notice.getURL());
 			aList.add(notice);
 		}
 		notices = new Notices(uuid,aList);

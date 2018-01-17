@@ -8,10 +8,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.sql.SQLException;
 import java.util.*;
+import java.time.OffsetDateTime;
+import java.time.*;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 
 import serverside.Client;
-import serverside.Notice;
-import serverside.Notices;
 
 /**
  * CGI klasse til at håndtere login.
@@ -48,6 +50,9 @@ public class Welcome extends CGI {
 							passWord = s;
 						// log.debug("Password was set: {}", passWord);
 						break;
+
+					case "REDIRECT":
+						break;
 					default:
 						break;
 					}
@@ -56,69 +61,62 @@ public class Welcome extends CGI {
 		}
 	}
 
+	protected static void showMenu() {
+		System.out.println("<nav>");
+		System.out.println("");
+		System.out.println("<ul>");
+		System.out.println("<li><a class=\"active\" href=\"#home\">Hjem</a></li>");
+		System.out.println("<li><a href=\"http://su3.eduhost.dk/cgi-bin/MyNotices\">Indkaldelser</a></li>");
+		System.out.println("<li><a href=\"#myPage\">Min side</a></li>");
+		System.out.println(
+				"<li style=\"float:right\"><a href=\"http://su3.eduhost.dk/index.html?logout=1\">Log ud</a></li>");
+		System.out.println("<li style=\"float:right\"><a href=\"http://su3.eduhost.dk/helpSite.html\">Hjælp</a></li>");
+		System.out.println("</ul>");
+		System.out.println("</nav>");
+	}
+
 	protected static void showBody() {
-		Notices notices = null;
-		try {
-			notices = dtb.getSessionNotices(sessionid);
+		String name = dtb.getNameFromUUID(uuid);
 
-			ArrayList<Notice> list = new ArrayList<>();
-			if (notices != null)
-				list = notices.getNotice();
-
-			System.out.println("<P ALIGN=\"CENTER\">");
-			// indhent indkaldelser fra databasen
-			if (list == null || list.size() == 0) { // no data
-				System.out.println("Ingen indkaldelser!</P>");
-			}
-			// ellers er der indkaldelser
-			else {
-				System.out.println("<TABLE BORDER=\"1\">");
-				System.out.println("<TR>");
-				System.out.println("	<TH>Dato og tid</TH>");
-				System.out.println("	<TH>Detajler</TH>");
-				System.out.println("</TR>");
-				for (int i = 0; i < list.size(); i++) {
-					Notice temp = list.get(i);
-
-					String url = temp.getURL();
-					String title = temp.getTitle();
-					String date = temp.getDate();
-
-					System.out.println("<TR><TD>" + date);
-					System.out.println("</TD><TD>");
-					System.out.println("<A HREF=\"http://" + url
-							+ /* do we need more attributes? */"\">");
-					System.out.println(title + "</A></TD></TR>");
-				}
-				System.out.println("</TABLE>");
-				System.out.println("</P>");
-			}
-			System.out.println("<P ALIGN=\"CENTER\">");
-		} catch (SQLException e) {
-			notices = null;
-			e.printStackTrace();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		System.out.println("<div class=\"group\">");
+		System.out.println("	<section>");
+		System.out.println(
+				"	<h2 align=\"center\">Velkommen til din side " + name + "! Her kan følge din behandling</h2>");
+		System.out.println("	<article>Velkommen til DTU Ballerup Universitetshospital.");
+		System.out.println("	Her har du blandt andet mulighed for at se dine kommende indkaldeser. ");
+		System.out.println("	P&aring; knappen \"Min side\" kan du se og &aelig;ndre dine kontaktoplysninger mm.");
+		System.out.println(
+				"	P&aring; knappen \"Indkaldelser\" kan du f&aring; det fulde overblik over alle dine indkaldelser. Du har blandt andet mulighed for at aflyse og &aelig;ndre tider p&aring; dine kommende indkaldelser.<br>");
+		System.out.println(
+				"	Hvis du har problemer og &oslash;nsker yderligere information, kan du altid trykke p&aring; \"Hj&aelig;lp\"-knappen oppe i højre hjørne og l&aelig;se n&aelig;rmere. </article>");
+		System.out
+				.println("	<article><iframe class=\"centerframe\" src=\"https://www.youtube.com/embed/Tuv4q5mgHOQ\">");
+		System.out.println("</iframe></article>	");
+		System.out.println("	</section>");
+		System.out.println("</div>");
 	}
 
 	public static void main(String[] args) {
 		boolean isUserValid = false;
 		// hent login oplysninger
-		BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-		try {
-			String[] data = { in.readLine() };
-			handleArgs(new StringTokenizer(data[0], "&\n\r"));
-		} catch (IOException e) {
-			e.printStackTrace();
+
+		if (args.length > 2 && args[1] != null && args[1].length() > 0) {
+			// redirect.
+		} else {
+
+			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+			try {
+				String[] data = { in.readLine() };
+				handleArgs(new StringTokenizer(data[0], "&\n\r"));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 
 		if (args.length > 1 && args[0] != null && args[0].length() > 0) {
 			cookie = args[0];
 			handleCookies(new StringTokenizer(cookie, ";\n\r"));
 		}
-
-		setCookie(""/* et eller andet */);
 
 		try {
 			uuid = dtb.downloadUUID(passWord, cpr);
@@ -127,17 +125,21 @@ public class Welcome extends CGI {
 			// log.error("Tried to validate user {}", e);
 		}
 		if (isUserValid) {
-			if (session == null){
-				sessionid=dtb.createSession(uuid);
-				System.out.println("Set-Cookie: __session=" + sessionid);
+			if (session == null) {
+				sessionid = dtb.createSession(uuid);
+				OffsetDateTime oneHourFromNow = OffsetDateTime.now(ZoneOffset.UTC).plus(Duration.ofHours(1));
+
+				String cookieExpires = DateTimeFormatter.RFC_1123_DATE_TIME.format(oneHourFromNow);
+				System.out.println("Set-Cookie: __session=" + sessionid + "; expires=" + cookieExpires + ";");
+			} else {
+				sessionid = session;
 			}
-				
+
 			client = new Client();
 			String status = client.sendRequests(uuid);
 
 			showHead();
 			showMenu();
-			showTitle("Denne side viser dine kommende indkaldelser til hospitalet.");
 			showBody();
 			showTail();
 		} else {

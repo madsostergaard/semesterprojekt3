@@ -28,7 +28,7 @@ public class Server {
 	private static final String REPLY = "rpl";
 	private static final String NOTICE = "ntc";
 	private static final String REQUEST = "rqst";
-	private static final String HOSPITAL_ID = "0009";
+	private static final String HOSPITAL_ID = "0003";
 	private static String outPassword = "";
 	private static String inPassword = "";
 	private static String returnDomain = "";

@@ -3,7 +3,7 @@ package cgi;
 import java.io.*;
 import java.util.*;
 
-public class Convert_Bo {
+public class Convert {
 
 	private static BufferedReader in = null;
 	private static String filename = null;
@@ -12,8 +12,9 @@ public class Convert_Bo {
 	public static void main(String[] args) {
 		if (args.length > 0)
 			filename = args[0];
-		else
-			System.exit(0);
+		else{
+			System.out.println("Lukker systemet");
+			System.exit(0);}
 
 		try {
 			in = new BufferedReader(new FileReader(filename));
@@ -36,3 +37,4 @@ public class Convert_Bo {
 		}
 	}
 }
+	

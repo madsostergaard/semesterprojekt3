@@ -16,16 +16,17 @@ public class DatabaseConnection {
 	private static String cpr = "";
 	private static DatabaseConnection instance;
 	private static Connection conn;
-	private static final String url = "jdbc:mysql://su3.eduhost.dk/";
-	private static final String user = "root";
-	private static final String pass = "healerrearpattern";
-
+	private static final String url = "jdbc:mariadb://su3.eduhost.dk/";
+	private static final String user = "hospital";
+	private static final String pass = "volumedonut";
+	
 	private DatabaseConnection() {
 		try {
-			Class.forName("com.mysql.jdbc.Driver").newInstance();
+			Class.forName("org.mariadb.jdbc.Driver").newInstance();
 			conn = DriverManager.getConnection(url, user, pass);
 		} catch (Exception e) {
 			System.out.println("Not possible to make database connection!");
+			
 			System.exit(0);
 		}
 	}
@@ -207,32 +208,48 @@ public class DatabaseConnection {
 		ArrayList<String> output = new ArrayList<>();
 		String temp; // string to add to output
 
-		String sql = "SELECT idIndkaldelse, overskrift, tidspunkt FROM hospital.Indkaldelse WHERE Patient_CPR_UUID = ? AND tidspunkt > now();";
+		String sql = "SELECT idIndkaldelse, overskrift, tidspunkt, detaljer FROM hospital.Indkaldelse WHERE Patient_CPR_UUID = ? AND tidspunkt > now();";
 
 		PreparedStatement stmt = conn.prepareStatement(sql);
 		stmt.setString(1, uuid);
 
 		ResultSet rs = stmt.executeQuery();
 		Notices notices = new Notices(uuid);
+		
+		String session = createSession(uuid);
+		
 		while (rs.next()) {
 			Notice n = new Notice("", "", "", 0);
 			String murl = "";
-			temp = ""; // skal være ID&overskrift&tidspunkt
-			murl = "su3.eduhost.dk/cgi-bin/MyNotices?id=" + rs.getInt(1);
+			temp = ""; 
+			
+			murl = "su3.eduhost.dk/cgi-bin/MyNotices?session=" + session;
 			n.setURL(murl);
-			temp = /* "&" + */rs.getString(2);
+			temp = rs.getString(2);
 			n.setTitle(temp);
 			String date = rs.getDate(3).toLocalDate().toString();
 			String time = rs.getTime(3).toLocalTime().toString();
 			n.setDate(date + " " + time);
-			temp += "&" + date.toString();
-			temp += " " + time.toString();
-			temp += "&" + murl;
-			output.add(temp);
+			n.setDetails(rs.getString(4));
+			
 			notices.addNotice(n);
 		}
 
 		return notices;
+	}
+	
+	public String getNameFromUUID(String uuid){
+		try{
+		String name = ""; 
+		String sql = "SELECT forname FROM hospital.cprRegister WHERE uuid = ?";
+		String[] param = new String[]{uuid};
+		ResultSet rs = query(sql,param);
+		if(rs.next()) name = rs.getString(1);
+		
+		return name;
+		}catch(SQLException e){
+			return ""; 
+		}
 	}
 
 	public String getSessionFromUUID(String uuid) {
@@ -248,6 +265,21 @@ public class DatabaseConnection {
 			e.printStackTrace();
 		}
 		return sessionid;
+	}
+	
+	public String getUUIDFromSession(String session) {
+		String uuid = "";
+		String sql = "SELECT uuid FROM hospital.session WHERE idSession = ?";
+		String[] par = { session };
+		try {
+			ResultSet rs = query(sql, par);
+			if (rs.next())
+				uuid = "" + rs.getString(1);
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return uuid;
 	}
 
 	public String getNoticeDetails(int id) throws SQLException, ParseException {
@@ -266,7 +298,6 @@ public class DatabaseConnection {
 		// den nye getNoticeDetails?
 		if (rs.next()) {
 			Notice ntc = new Notice(rs.getString(1), rs.getString(2), rs.getDate(3).toLocalDate().toString(), 0);
-
 		}
 		// return ntc;
 

@@ -45,7 +45,7 @@ public class Client {
 
 			conf = new Config("src/konfiguration.conf");
 			// System.out.println("Conf init: OK");
-			dtb = DatabaseConnection.getInstance();
+			// dtb = DatabaseConnection.getInstance();
 			// System.out.println("DTB conn init: OK");
 
 			String ip = conf.confValue("ip");
@@ -111,16 +111,21 @@ public class Client {
 
 	public String sendRequests(String uuid) {
 		// saveLocalNotices(uuid);
-		String sessionid = dtb.getSessionFromUUID(uuid);
+		// String sessionid = dtb.getSessionFromUUID(uuid);
+		String ids = conf.confValue("ids");
+		StringTokenizer st = new StringTokenizer(ids, ",");
+		ArrayList<String> idList = new ArrayList<>();
+		while (st.hasMoreTokens()) {
+			idList.add(st.nextToken());
+		}
 
-		int size = ips.size();
-		int[][] state = new int[size][2];
+		int size = idList.size();
+		int[][] state = new int[size][3];
 		for (int j = 0; j < state.length; j++) {
-			for (int i = 0; i < 2; i++) {
+			state[j][0] = new Integer(idList.get(j));
+			for (int i = 1; i < 3; i++) {
 				state[j][i] = 0;
-				//System.out.print("[" + state[j][i] + "]");
 			}
-			//System.out.println();
 		}
 
 		String status = "";
@@ -152,53 +157,82 @@ public class Client {
 				int total = new Integer(data[5]);
 				String place = data[2];
 				String pass = data[3];
+				System.out.println("[Client] Modtaget streng: "+received);
 
-				//System.out.println("[CLIENT] Received: " + received);
+				// System.out.println("[CLIENT] Received: " + received);
 
 				setParams(place);
 
-				if (!pass.equals(inPassword))
-					break;
-				// TODO: check for password
+				// if (!pass.equals(inPassword)){
+				// System.out.println("Password not valid!");
+				// continue;}
 
-				state[new Integer(place) - 1][0] += 1;
-				state[new Integer(place) - 1][1] = total;
+				for (int j = 0; j < state.length; j++) {
+					if (state[j][0] == (new Integer(place))) {
+						state[j][1] += 1;
+						state[j][2] = total;
+					}
+				}
 
 				// get the notices
+				System.out.println("[Client] Modtagne indkaldelser:");
 				Notices notices = handler.getNotices();
+				ArrayList<Notice> liste = notices.getNotice();
+				for (Notice n : liste) {
+					System.out.println(n.toString());
+				}
+				System.out.println();
 
 				// save to session table
-				dtb.saveSessionNotices(sessionid, notices);
+				// dtb.saveSessionNotices(sessionid, notices);
 
 				boolean ok = true;
 				for (int k = 0; k < state.length; k++) {
-					//System.out.println("[" + state[k][0] + "][" + state[k][1] + "]");
-					boolean isOK = (state[k][0] == state[k][1] && !(state[k][1] == 0));
-					if (!isOK && k != 2)
+					boolean isOK = (state[k][1] == state[k][2] && !(state[k][2] == 0));
+					if (!isOK)
 						ok = false;
-					if (isOK && k != 2)
-						status += "" + (k + 1) + ":OK,";
+					if (isOK)
+						status += "" + (state[k][0]) + ":OK,";
 				}
 				if (ok)
 					break;
 			} catch (SocketTimeoutException e2) {
 				// protocol timeout:
+				System.out.println("[Client] Timeout: t="+t2);
 				for (int k = 0; k < state.length; k++) {
-					boolean isOK = (state[k][0] == state[k][1] && !(state[k][1] == 0));
+					boolean isOK = (state[k][1] == state[k][2] && !(state[k][2] == 0));
 
-					if (!isOK && k != 2) {
-						int place = k + 1;
-						setParams("000" + place);
+					if (!isOK) {
+						int place = state[k][0];
+						String temp = "";
+						if (place < 10)
+							temp = "000" + place;
+						else if (place < 100)
+							temp = "00" + place;
+						else if (place < 1000)
+							temp = "0" + place;
+						else
+							temp = "" + place;
+						setParams(temp);
 						sendPacket(returnDomain, uuid, outPassword);
 					}
 				}
 			} catch (IOException e) {
-				// System.out.println("fejl i modtagelse");
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+				//System.out.println("fejl i modtagelse");
+			} /*
+				 * catch (SQLException e) { // TODO Auto-generated catch block
+				 * e.printStackTrace(); }
+				 */
 		}
+		
+		System.out.println("\n[Client] Udskriver status-tabel:");
+		for(int i = 0; i<state.length; i++){
+			for(int j = 0; j<3; j++){
+				System.out.print("["+state[i][j]+"]");
+			}
+			System.out.println();
+		}
+		System.out.println();
 
 		if (status.isEmpty())
 			status = "error!";
